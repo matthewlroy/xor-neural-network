@@ -19,6 +19,7 @@ class XORDeepNeuralNet:
 
     self.expected_output = outputs
     self.is_debugging = is_debugging
+    self.learning_rate = learning_rate
 
     # Initialize our empty layers
     self.input_layer = inputs
@@ -69,20 +70,36 @@ class XORDeepNeuralNet:
 
     # 2. Backpropagation
 
-    # # 2a. Get cost deriv. of weights: (last hidden layer) <-- (output layer)
-    output_error = self.output_layer - self.expected_output
-    # error_output_layer = output_error * self.sigmoid_prime(self.output_layer)
-    # cost_of_output_weights = np.dot(self.hidden_layers[hidden_layer_len - 1].T, error_output_layer)
+    # 2a. Get cost deriv. of weights: (last hidden layer) <-- (output layer)
+    output_error = self.expected_output - self.output_layer
+    error_output_layer = output_error * self.sigmoid_prime(self.output_layer)
+    cost_of_output_weights = np.dot(self.hidden_layers[hidden_layer_len - 1].T, error_output_layer)
 
-    # # 2b. Get cost deriv. of weights: (hidden layer -2) <-- (hidden layer -1)
-    # costs_of_hidden_weights = []
-    # for layer in range(hidden_layer_len - 1, 0, -1): # n..1
-    #   error_hidden_layer = np.dot(error_output_layer, self.output_weights.T) * self.sigmoid_prime(self.hidden_layers[layer])
-    #   costs_of_hidden_weights.append(np.dot(self.hidden_layers[layer - 1].T, error_hidden_layer))
+    # 2b. Get cost deriv. of weights: (hidden layer -2) <-- (hidden layer -1)
+    costs_of_hidden_weights = {}
+    for layer in range(hidden_layer_len - 1, 0, -1): # n..1
+       prev_layer = self.hidden_layers[layer - 1]
+       cur_layer = self.hidden_layers[layer]
+       cur_weights = self.hidden_weights[layer]
 
-    # # 2c. Get cost deriv. of weights: (input layer) <-- (first hidden layer)
+       this_layers_err = self.expected_output - cur_layer
+       error_hidden_layer = this_layers_err * self.sigmoid_prime(cur_layer)
 
-    # # 2d. Update weight matricies
+       costs_of_hidden_weights[layer] = np.dot(
+          prev_layer.T,
+          np.dot(error_hidden_layer, cur_weights.T) * self.sigmoid_prime(cur_layer)
+        )
+
+    # 2c. Get cost deriv. of weights: (input layer) <-- (first hidden layer)
+    input_error = self.expected_output - self.input_layer
+    error_input_layer = input_error * self.sigmoid_prime(self.input_layer)
+    cost_of_input_weights = np.dot(self.input_layer.T, np.dot(error_input_layer, self.hidden_weights[0]) * self.sigmoid_prime(self.hidden_layers[0]))
+
+    # 2d. Update weight matricies
+    self.hidden_weights[0] += cost_of_input_weights * self.learning_rate
+    for key, value in costs_of_hidden_weights.items():
+        self.hidden_weights[key] += value * self.learning_rate
+    self.hidden_weights[hidden_layer_len - 1] += cost_of_output_weights * self.learning_rate
 
     # Debug
     if (self.is_debugging):
@@ -90,10 +107,14 @@ class XORDeepNeuralNet:
          print("`hidden_layer_{}`\n {}\n".format(layer, self.hidden_layers[layer]))
       print("`output_layer`\n {}\n".format(self.output_layer))
       print("`output_error`\n {}\n".format(output_error))
-      # print("`cost_of_output_weights (~= layer {})` {}\n".format(hidden_layer_len, cost_of_output_weights.tolist()))
-      # for wc in range(costs_of_hidden_weights.__len__()):
-      #    print("`costs_of_hidden_weights_{}`\n {}\n".format(wc, costs_of_hidden_weights[wc]))
+      print("`cost_of_output_weights, layer {}\n` {}\n".format(hidden_layer_len, cost_of_output_weights.tolist()))
+      for key, value in costs_of_hidden_weights.items():
+          print("costs_of_hidden_weights, layer", key, "\n", value, "\n")
+      print("`cost_of_input_weights, layer {}\n` {}\n".format(hidden_layer_len, cost_of_input_weights.tolist()))
 
+  def output_results(self):
+    return self.output_layer
+  
   def sigmoid(self, z):
     return 1 / (1 + np.exp(-z))
   
@@ -107,29 +128,30 @@ a_b_in = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 q_out = np.array([[0], [1], [1], [0]])
 net = XORDeepNeuralNet(
   inputs=a_b_in, 
-  outputs=q_out)
+  outputs=q_out,
+  is_debugging=False)
 
 net.__call__()
 
-# outer_n = 1
-# iters_per_n = 1
-# history = {}
+outer_n = 10
+iters_per_n = 250
+history = {}
 
-# for x in range(0, outer_n):
-#   n = iters_per_n * (x + 1)
-#   for _ in range(0, n):
-#     net.__call__()
-#   error = round(np.mean(np.abs(np.subtract(net.output_results(), q_out))) * 100, 6)
-#   history[n] = error
-#   print("After {} iterations . . .\n----------------------".format(n))
-#   print("model output = ({})".format(net.output_results().tolist()))
-#   print("desired output = ({})".format(q_out.tolist()))
-#   print("error = {}%\n\n".format(error))
+for x in range(0, outer_n):
+  n = iters_per_n * (x + 1)
+  for _ in range(0, n):
+    net.__call__()
+  error = round(np.mean(np.abs(np.subtract(net.output_results(), q_out))) * 100, 6)
+  history[n] = error
+  print("After {} iterations . . .\n----------------------".format(n))
+  print("model output = ({})".format(net.output_results().tolist()))
+  print("desired output = ({})".format(q_out.tolist()))
+  print("error = {}%\n\n".format(error))
 
-# endTime = datetime.now()
-# print("\n* * * *  END  CODE EXECUTION * * * *\n")
-# print("Ended script at: {}".format(endTime))
-# print("Script execution time: {}\n".format(endTime - startTime))
+endTime = datetime.now()
+print("\n* * * *  END  CODE EXECUTION * * * *\n")
+print("Ended script at: {}".format(endTime))
+print("Script execution time: {}\n".format(endTime - startTime))
 
 # lists = sorted(history.items())
 # x, y = zip(*lists)
