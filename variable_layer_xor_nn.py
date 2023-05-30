@@ -11,9 +11,9 @@ class XORDeepNeuralNet:
   def __init__(self, 
                inputs,
                outputs,
-               num_of_hidden_layers=3,
+               num_of_hidden_layers=2,
                neurons_per_hidden_layer=4,
-               learning_rate=0.5,
+               learning_rate=1.5,
                is_debugging=True):
     super(XORDeepNeuralNet, self).__init__()
 
@@ -59,17 +59,16 @@ class XORDeepNeuralNet:
     # 1. Feed foward
     # 1a. Input Layer -> First Hidden Layer
     self.hidden_layers[0] = self.sigmoid(np.dot(self.input_layer, self.hidden_weights[0]))
-    
+
     # 1b. Hidden Layers (assumption: num_of_hidden_layers >= 1)
     hidden_layer_len = self.hidden_layers.__len__()
     for layer in range(1, hidden_layer_len): # 1..n
-     self.hidden_layers[layer] = self.sigmoid(np.dot(self.hidden_layers[layer - 1], self.hidden_weights[layer]))
-    
+        self.hidden_layers[layer] = self.sigmoid(np.dot(self.hidden_layers[layer - 1], self.hidden_weights[layer]))
+
     # 1c. Last Hidden Layer -> Output Layer
     self.output_layer = self.sigmoid(np.dot(self.hidden_layers[hidden_layer_len - 1], self.output_weights))
 
     # 2. Backpropagation
-
     # 2a. Get cost deriv. of weights: (last hidden layer) <-- (output layer)
     output_error = self.expected_output - self.output_layer
     error_output_layer = output_error * self.sigmoid_prime(self.output_layer)
@@ -78,17 +77,12 @@ class XORDeepNeuralNet:
     # 2b. Get cost deriv. of weights: (hidden layer -2) <-- (hidden layer -1)
     costs_of_hidden_weights = {}
     for layer in range(hidden_layer_len - 1, 0, -1): # n..1
-       prev_layer = self.hidden_layers[layer - 1]
-       cur_layer = self.hidden_layers[layer]
-       cur_weights = self.hidden_weights[layer]
-
-       this_layers_err = self.expected_output - cur_layer
-       error_hidden_layer = this_layers_err * self.sigmoid_prime(cur_layer)
-
-       costs_of_hidden_weights[layer] = np.dot(
-          prev_layer.T,
-          np.dot(error_hidden_layer, cur_weights.T) * self.sigmoid_prime(cur_layer)
-        )
+        prev_layer = self.hidden_layers[layer - 1]
+        cur_layer = self.hidden_layers[layer]
+        cur_weights = self.hidden_weights[layer]
+        this_layers_err = self.expected_output - cur_layer
+        error_hidden_layer = this_layers_err * self.sigmoid_prime(cur_layer)
+        costs_of_hidden_weights[layer] = np.dot( prev_layer.T, np.dot(error_hidden_layer, cur_weights.T) * self.sigmoid_prime(cur_layer) * self.sigmoid_prime(prev_layer) )
 
     # 2c. Get cost deriv. of weights: (input layer) <-- (first hidden layer)
     input_error = self.expected_output - self.input_layer
@@ -99,7 +93,7 @@ class XORDeepNeuralNet:
     self.hidden_weights[0] += cost_of_input_weights * self.learning_rate
     for key, value in costs_of_hidden_weights.items():
         self.hidden_weights[key] += value * self.learning_rate
-    self.hidden_weights[hidden_layer_len - 1] += cost_of_output_weights * self.learning_rate
+    self.output_weights += cost_of_output_weights * self.learning_rate
 
     # Debug
     if (self.is_debugging):
@@ -134,7 +128,7 @@ net = XORDeepNeuralNet(
 net.__call__()
 
 outer_n = 10
-iters_per_n = 250
+iters_per_n = 2500
 history = {}
 
 for x in range(0, outer_n):
@@ -153,9 +147,9 @@ print("\n* * * *  END  CODE EXECUTION * * * *\n")
 print("Ended script at: {}".format(endTime))
 print("Script execution time: {}\n".format(endTime - startTime))
 
-# lists = sorted(history.items())
-# x, y = zip(*lists)
-# plt.plot(x, y)
-# plt.xlabel('# of Iterations')
-# plt.ylabel('Error %')
-# plt.show()
+lists = sorted(history.items())
+x, y = zip(*lists)
+plt.plot(x, y)
+plt.xlabel('# of Iterations')
+plt.ylabel('Error %')
+plt.show()
