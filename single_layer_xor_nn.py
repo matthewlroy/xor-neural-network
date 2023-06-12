@@ -205,5 +205,5 @@ x, y = zip(*lists) # unpack a list of pairs into two tuples
 plt.plot(x, y)
 plt.xlabel('# of Iterations')
 plt.ylabel('Error %')
-plt.title('XOR NN Prediction Performance')
+plt.title('XOR NN Prediction Performance - SINGLE LAYER')
 plt.show()

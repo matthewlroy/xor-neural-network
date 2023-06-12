@@ -47,6 +47,12 @@ endTime = datetime.now()
 print("Ended script at: {}".format(endTime))
 print("Script execution time: {}\n".format(endTime - startTime))
 
-# Plot 
-plt.plot(predictions)
+# Calculate the error percentage values over the epochs
+error_percentage = [(1 - accuracy) * 100 for accuracy in history.history['binary_accuracy']]
+
+# Plot the error percentage values over the epochs
+plt.plot(error_percentage)
+plt.xlabel('# of Iterations')
+plt.ylabel('Error %')
+plt.title('XOR NN Prediction Performance - TENSORFLOW')
 plt.show()
